@@ -14,7 +14,8 @@ window.Cloud = (function () {
   "use strict";
 
   const cfg = window.PLANNER_CONFIG || {};
-  const base = String(cfg.supabaseUrl || "").trim().replace(/\/+$/, "");
+  // Accept the project URL even if it was copied with /rest/v1 or /auth/v1 on the end
+  const base = String(cfg.supabaseUrl || "").trim().replace(/\/+$/, "").replace(/\/(rest|auth)\/v1$/, "");
   const key = String(cfg.supabaseKey || "").trim();
   const configured = !!(base && key);
 

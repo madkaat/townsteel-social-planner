@@ -62,7 +62,7 @@
 
   // ---------- State ----------
   let state;
-  const ui = { view: "calendar", week: null, ideaFilter: "all", perfRange: "all" };
+  const ui = { view: "calendar", week: null, ideaFilter: "all", ideaStatus: "todo", perfRange: "all" };
 
   function blankPost(fields) {
     return Object.assign({ id: uid(), date: "", pillar: "", title: "", format: "", goal: "", status: "Idea", stage: "", caption: "", asset: "", notes: "", metrics: {} }, fields);
@@ -327,30 +327,61 @@
   }
 
   // ---------- View: Idea bank ----------
+  function ideaCard(p) {
+    const posted = p.status === POSTED;
+    return `<div class="card idea ${posted ? "is-posted" : ""}" style="${pc(p.pillar)}">
+      <div class="row spread">${pillarChip(p.pillar)}<span class="row" style="gap:6px">${stageTag(p)}${statusTag(p.status)}</span></div>
+      <div class="title">${esc(p.title || "Untitled idea")}</div>
+      ${p.format ? `<div class="faint">${esc(p.format)}</div>` : ""}
+      ${p.goal ? `<div class="muted" style="font-size:14px">${esc(p.goal)}</div>` : ""}
+      ${posted ? `<div class="faint">Add the date it went live to move it onto the calendar and count it in Performance.</div>` : ""}
+      <div class="actions">
+        ${posted
+          ? `<button class="btn small primary" data-edit="${p.id}">Add post date</button>`
+          : `<button class="btn small primary" data-schedule="${p.id}">Schedule</button><button class="btn small" data-edit="${p.id}">Edit</button>`}
+      </div>
+    </div>`;
+  }
+
   function renderIdeas() {
     const all = ideas();
-    const filterPillars = pillarsInUse(all);
+    const byStatus = {
+      todo: all.filter((p) => p.status !== POSTED),
+      posted: all.filter((p) => p.status === POSTED),
+      all
+    };
+    if (!byStatus[ui.ideaStatus]) ui.ideaStatus = "todo";
+    const inStatus = byStatus[ui.ideaStatus];
+    const filterPillars = pillarsInUse(inStatus);
     if (ui.ideaFilter !== "all" && !filterPillars.some((p) => p.id === ui.ideaFilter)) ui.ideaFilter = "all";
-    const list = all.filter((p) => ui.ideaFilter === "all" || p.pillar === ui.ideaFilter);
-    const filters = [`<button class="pill-btn ${ui.ideaFilter === "all" ? "active" : ""}" data-ideafilter="all">All <span class="faint">${all.length}</span></button>`]
-      .concat(filterPillars.map((p) => `<button class="pill-btn ${ui.ideaFilter === p.id ? "active" : ""}" data-ideafilter="${esc(p.id)}">${esc(p.short)} <span class="faint">${all.filter((x) => x.pillar === p.id).length}</span></button>`)).join("");
+    const list = inStatus.filter((p) => ui.ideaFilter === "all" || p.pillar === ui.ideaFilter);
+
+    const statusTabs = [["todo", "Not posted yet"], ["posted", POSTED], ["all", "All"]]
+      .map(([v, l]) => `<button class="pill-btn ${ui.ideaStatus === v ? "active" : ""}" data-ideastatus="${v}">${esc(l)} <span class="faint">${byStatus[v].length}</span></button>`).join("");
+    const pillarTabs = [`<button class="pill-btn ${ui.ideaFilter === "all" ? "active" : ""}" data-ideafilter="all">All pillars <span class="faint">${inStatus.length}</span></button>`]
+      .concat(filterPillars.map((p) => `<button class="pill-btn ${ui.ideaFilter === p.id ? "active" : ""}" data-ideafilter="${esc(p.id)}">${esc(p.short)} <span class="faint">${inStatus.filter((x) => x.pillar === p.id).length}</span></button>`)).join("");
+
+    // In "All", keep ideas still in play on top and posted ones in their own section below
+    const open = list.filter((p) => p.status !== POSTED), done = list.filter((p) => p.status === POSTED);
+    let body;
+    if (!list.length) {
+      body = `<div class="empty">${ui.ideaStatus === "posted" ? `Nothing marked ${POSTED} in the idea bank.` : "No ideas here yet."}</div>`;
+    } else if (ui.ideaStatus === "all" && open.length && done.length) {
+      body = `<div class="idea-list">${open.map(ideaCard).join("")}</div>
+        <h3 class="list-divider">${POSTED} <span class="faint">${done.length}</span></h3>
+        <div class="idea-list">${done.map(ideaCard).join("")}</div>`;
+    } else {
+      body = `<div class="idea-list">${list.map(ideaCard).join("")}</div>`;
+    }
+
     $("#view-ideas").innerHTML = `
       <div class="section-head row spread">
         <div><h2>Idea bank</h2><p>Unscheduled ideas, swaps for the flexible Friday slot, and ways to repurpose footage. Schedule one when a slot opens up.</p></div>
         <button class="btn primary" data-add="">+ New idea</button>
       </div>
-      <div class="filters">${filters}</div>
-      ${list.length ? `<div class="idea-list">${list.map((p) => `
-        <div class="card idea" style="${pc(p.pillar)}">
-          <div class="row spread">${pillarChip(p.pillar)}${stageTag(p)}</div>
-          <div class="title">${esc(p.title || "Untitled idea")}</div>
-          ${p.format ? `<div class="faint">${esc(p.format)}</div>` : ""}
-          ${p.goal ? `<div class="muted" style="font-size:14px">${esc(p.goal)}</div>` : ""}
-          <div class="actions">
-            <button class="btn small primary" data-schedule="${p.id}">Schedule</button>
-            <button class="btn small" data-edit="${p.id}">Edit</button>
-          </div>
-        </div>`).join("")}</div>` : `<div class="empty">No ideas here yet.</div>`}`;
+      <div class="filters" role="group" aria-label="Filter by status">${statusTabs}</div>
+      <div class="filters" role="group" aria-label="Filter by pillar">${pillarTabs}</div>
+      ${body}`;
   }
 
   // ---------- View: Journeys (stages for any pillar) ----------
@@ -863,6 +894,11 @@
       save(); render(); return;
     }
     if (d.ideafilter) { ui.ideaFilter = d.ideafilter; render(); return; }
+    if (d.ideastatus) {
+      ui.ideaStatus = d.ideastatus;
+      try { localStorage.setItem(STORAGE_KEY + ":ideaStatus", ui.ideaStatus); } catch (err) { /* ignore */ }
+      render(); return;
+    }
     if (d.range) { ui.perfRange = d.range; render(); return; }
     if (d.dellog) { state.followerLog = state.followerLog.filter((x) => x.date !== d.dellog); save(); render(); return; }
 
@@ -948,6 +984,7 @@
   state = load();
   save();
   try { ui.view = localStorage.getItem(STORAGE_KEY + ":view") || "calendar"; } catch (e) { /* ignore */ }
+  try { ui.ideaStatus = localStorage.getItem(STORAGE_KEY + ":ideaStatus") || "todo"; } catch (e) { /* ignore */ }
   const thisWeek = mondayOf(todayKey());
   // Open on the starter plan if it hasn't started yet, otherwise on the current week
   ui.week = state.starterWeek && state.starterWeek > thisWeek ? state.starterWeek : thisWeek;

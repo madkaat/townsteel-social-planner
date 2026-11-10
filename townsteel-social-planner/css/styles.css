@@ -162,6 +162,9 @@ main { padding: 24px; max-width: 1400px; margin: 0 auto; }
 .idea { border-left: 4px solid var(--pc); display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; }
 .idea .title { font-weight: 600; }
 .idea .actions { display: flex; gap: 6px; margin-top: auto; padding-top: 4px; }
+.idea.is-posted { opacity: .75; }
+.list-divider { font-size: 15px; font-weight: 600; margin: 24px 0 12px; padding-top: 16px; border-top: 1px solid var(--border); }
+.filters + .filters { margin-top: -6px; }
 .empty { color: var(--text-3); padding: 24px; text-align: center; border: 1px dashed var(--border); border-radius: var(--radius); }
 
 /* ---------- ODM journey ---------- */
