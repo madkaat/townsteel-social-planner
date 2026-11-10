@@ -2,7 +2,7 @@
 
 A lightweight LinkedIn content planner I built to run TownSteel's company page with a clear strategy instead of one-off posts. It organizes five posts a week around four content pillars and tracks how each pillar performs.
 
-**Live site:** `https://YOUR-USERNAME.github.io/townsteel-social-planner/` (update this after you turn on GitHub Pages)
+**Live site:** https://madkaat.github.io/townsteel-social-planner/
 
 ## The problem
 
@@ -34,7 +34,8 @@ The marketing team asked social to promote several priorities at once: AegisSync
 - **Idea bank**: unscheduled ideas filtered by pillar, scheduled into an open day with one click.
 - **Journeys**: any pillar can move through stages (ODM uses Awareness, Credibility, Conversion), with posts sorted by stage and a checklist for each journey.
 - **Performance**: impressions, engagement rate, and clicks by pillar, a weekly follower log, and CSV export.
-- **Backup**: data saves in the browser automatically; export and import a JSON backup anytime.
+- **Cloud sync**: sign in once per browser and the plan is the same everywhere, with offline support and a prompt if two browsers edit at the same time.
+- **Backup**: export and import a JSON backup anytime.
 
 ## Built to change with the strategy
 
@@ -50,15 +51,21 @@ Charts, filters, and the calendar adjust automatically to whatever pillars exist
 
 ## Tech
 
-Plain HTML, CSS, and JavaScript. No frameworks, no build step, no server. Hosted free on GitHub Pages.
+Plain HTML, CSS, and JavaScript with no frameworks or build step, hosted free on GitHub Pages. Accounts and data storage use Supabase (Postgres with row-level security), called directly over its REST API.
 
 ```
-index.html        page layout
-css/styles.css    styling (light and dark mode)
-js/seed.js        starter pillars, themes, formats, statuses, first 20 posts
-js/app.js         the app: calendar, editors, idea bank, journeys, performance, settings
+index.html             page layout and sign-in screen
+css/styles.css         styling (light and dark mode)
+js/config.js           Supabase project URL and public key
+js/seed.js             starter pillars, themes, formats, statuses, first 20 posts
+js/cloud.js            sign-in and sync with version checks
+js/app.js              the app: calendar, editors, idea bank, journeys, performance, settings
+supabase-setup.sql     database table and access rules
+SETUP-CLOUD-SYNC.md    step-by-step setup guide
 ```
 
 ## Your data
 
-Posts are saved in your browser's local storage on the computer you use. They are not uploaded to GitHub, so nothing internal ends up in a public repo. Use **Strategy & settings > Export backup** regularly, and **Import backup** to move to another computer or browser. Clearing your browser data will erase the planner, so keep a recent backup.
+Each user's planner is stored as one row in Supabase. Row-level security means a signed-in user can only read and write their own row, so nothing is visible in this public repo or to other visitors. Changes save to the browser first (instant, works offline) and sync to the cloud a second later. Each save increments a version number, so two browsers editing at once trigger a choice instead of a silent overwrite.
+
+Without Supabase keys in `js/config.js`, the planner runs in browser-only mode.

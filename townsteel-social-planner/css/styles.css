@@ -281,6 +281,34 @@ legend { font-size: 13px; font-weight: 600; padding: 0 6px; }
 .stage-notes { display: grid; gap: 8px; }
 .stage-note-row { display: grid; grid-template-columns: 120px 1fr; gap: 8px; align-items: center; font-size: 13px; }
 
+/* ---------- Cloud sync ---------- */
+.sync-pill {
+  margin-left: auto; display: inline-flex; align-items: center; gap: 7px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text-2);
+  padding: 6px 12px; border-radius: 999px; font-size: 13px; cursor: pointer; white-space: nowrap;
+}
+.sync-pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--text-3); }
+.sync-pill[data-state="synced"]::before { background: var(--c2); }
+.sync-pill[data-state="saving"]::before { background: var(--c0); }
+.sync-pill[data-state="offline"]::before, .sync-pill[data-state="local"]::before { background: var(--c3); }
+.sync-pill[data-state="error"]::before, .sync-pill[data-state="signed-out"]::before { background: var(--danger); }
+#auth {
+  position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: 16px;
+  background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(6px);
+}
+#auth[hidden] { display: none; }
+body.locked { overflow: hidden; }
+.auth-card {
+  width: min(420px, 100%); background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: 0 8px 40px rgba(0,0,0,.08); padding: 28px; display: grid; gap: 14px;
+}
+.auth-card h2 { font-size: 20px; }
+.auth-card form { display: grid; gap: 12px; }
+.auth-card input { width: 100%; border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius-sm); padding: 9px 10px; color: var(--text); font-size: 15px; }
+.auth-actions .btn { flex: 1; }
+#auth-msg { font-size: 14px; color: var(--text-2); min-height: 1.2em; }
+#auth-msg.error { color: var(--danger); }
+
 /* ---------- Responsive ---------- */
 @media (max-width: 1000px) {
   .week-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -290,6 +318,8 @@ legend { font-size: 13px; font-weight: 600; padding: 0 6px; }
 }
 @media (max-width: 640px) {
   .topbar { padding: 12px 16px; gap: 12px; }
+  .sync-pill { position: absolute; top: 14px; right: 16px; }
+  .topbar { position: sticky; }
   .tabs { flex-wrap: nowrap; overflow-x: auto; width: 100%; padding-bottom: 2px; }
   main { padding: 16px; }
   .week-grid, .stages { grid-template-columns: 1fr; }

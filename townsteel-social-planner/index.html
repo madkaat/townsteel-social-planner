@@ -23,6 +23,7 @@
       <button class="tab" data-view="performance" role="tab">Performance</button>
       <button class="tab" data-view="strategy" role="tab">Strategy &amp; settings</button>
     </nav>
+    <button class="sync-pill" id="sync-status" data-view="strategy" data-state="local" type="button">This browser only</button>
   </header>
 
   <main id="app">
@@ -37,10 +38,29 @@
     <form id="editor-form" method="dialog"></form>
   </dialog>
 
+  <div id="auth" hidden>
+    <div class="auth-card">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <h2>Sign in to your planner</h2>
+      <p class="muted">Your plan is saved to your account, so it's the same on every browser and computer.</p>
+      <form id="auth-form">
+        <label class="field">Email<input type="email" name="email" autocomplete="email" required></label>
+        <label class="field">Password<input type="password" name="password" autocomplete="current-password" required minlength="6"></label>
+        <div class="row auth-actions">
+          <button class="btn primary" type="submit" value="signin">Sign in</button>
+          <button class="btn" type="submit" value="signup">Create account</button>
+        </div>
+        <p id="auth-msg" role="status" aria-live="polite"></p>
+      </form>
+    </div>
+  </div>
+
   <div id="toast" role="status" aria-live="polite"></div>
   <div id="tip" role="tooltip"></div>
 
+  <script src="js/config.js"></script>
   <script src="js/seed.js"></script>
+  <script src="js/cloud.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

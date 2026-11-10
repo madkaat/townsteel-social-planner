@@ -186,12 +186,17 @@
   }
 
   let storageOk = true;
-  function save() {
+  function writeLocal() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
     catch (e) {
-      if (storageOk) toast("Your browser is blocking storage. Use Export to keep a copy.");
+      if (storageOk && !(window.Cloud && Cloud.configured)) toast("Your browser is blocking storage. Use Export to keep a copy.");
       storageOk = false;
     }
+  }
+  // Save to this browser right away, then let cloud sync (if set up) send it to your account
+  function save() {
+    writeLocal();
+    if (window.Cloud) Cloud.changed();
   }
 
   // ---------- Pillar helpers ----------
@@ -550,7 +555,13 @@
           ${listEditor("statuses", state.statuses, "Add a status", [POSTED])}</div>
       </div>
 
-      <div class="section-head" style="margin-top:28px"><h2>Your data</h2><p>Everything saves automatically in this browser on this computer. Export a backup now and then, and use Import to move your plan to another computer or browser.</p></div>
+      <div class="section-head" style="margin-top:28px"><h2>Your data</h2><p>${window.Cloud && Cloud.configured
+        ? "Changes save to this browser instantly and to your account in the cloud a second later, so the planner is the same on every browser you sign in to."
+        : "Everything saves automatically in this browser on this computer. Set up cloud sync (see SETUP-CLOUD-SYNC.md) to use it on any browser."}</p></div>
+      <div class="card" style="margin-bottom:12px"><h3 style="font-size:15px;margin-bottom:6px">Cloud sync</h3>
+        <p class="faint" id="sync-info" style="margin-bottom:10px">${window.Cloud ? esc(Cloud.describe()) : ""}</p>
+        ${window.Cloud && Cloud.configured && Cloud.signedIn ? `<div class="row"><button class="btn" id="sync-now">Sync now</button><button class="btn" id="sign-out">Sign out</button></div>` : ""}
+      </div>
       <div class="grid-2">
         <div class="card"><h3 style="font-size:15px;margin-bottom:10px">Backup</h3>
           <div class="row">
@@ -856,6 +867,8 @@
     if (d.dellog) { state.followerLog = state.followerLog.filter((x) => x.date !== d.dellog); save(); render(); return; }
 
     if (t.id === "copy-week") copyWeek();
+    if (t.id === "sync-now") Cloud.syncNow();
+    if (t.id === "sign-out") { if (confirmAction("Sign out? Your planner stays saved in your account; this browser's copy is cleared.")) Cloud.signOut(); }
     if (t.id === "export-csv") exportCsv();
     if (t.id === "export-json") { download(`townsteel-planner-backup-${todayKey()}.json`, JSON.stringify(state, null, 2), "application/json"); toast("Backup downloaded"); }
     if (t.id === "add-starter") {
@@ -939,4 +952,17 @@
   // Open on the starter plan if it hasn't started yet, otherwise on the current week
   ui.week = state.starterWeek && state.starterWeek > thisWeek ? state.starterWeek : thisWeek;
   render();
+
+  // Cloud sync: loads your saved plan from your account and keeps every browser in step
+  if (window.Cloud) {
+    Cloud.start({
+      getState: () => state,
+      replaceState: (data) => {
+        state = normalize(data);
+        writeLocal(); // local copy only, this came from the cloud
+        if (!dlg().open) render();
+        toast("Loaded your latest plan");
+      }
+    });
+  }
 })();
