@@ -6,6 +6,6 @@
 // what the database rules allow, and those rules only let a signed-in user
 // read and write their own planner.
 window.PLANNER_CONFIG = {
-  supabaseUrl: "",   // looks like https://abcdefghijklm.supabase.co
-  supabaseKey: ""    // the anon (or "publishable") key, a long string
+  supabaseUrl: "https://qfcoufkqszqqxjkbtbdd.supabase.co/rest/v1/",   // looks like https://abcdefghijklm.supabase.co
+  supabaseKey: "sb_publishable_TDAzJMGdSnjHa7WHnxWb1g_ZEzQ--7B"    // the anon (or "publishable") key, a long string
 };
