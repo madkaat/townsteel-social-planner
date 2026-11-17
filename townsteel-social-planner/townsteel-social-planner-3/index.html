@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TownSteel Social Planner</title>
+  <meta name="description" content="A LinkedIn content planner built around flexible content pillars: weekly calendar, idea bank, campaign journeys, and performance tracking.">
+  <link rel="stylesheet" href="css/styles.css?v=5">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <div>
+        <h1>Social Planner</h1>
+        <p class="sub">TownSteel on LinkedIn</p>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button class="tab" data-view="calendar" role="tab">Calendar</button>
+      <button class="tab" data-view="ideas" role="tab">Idea bank</button>
+      <button class="tab" data-view="journeys" role="tab">Journeys</button>
+      <button class="tab" data-view="performance" role="tab">Performance</button>
+      <button class="tab" data-view="strategy" role="tab">Strategy &amp; settings</button>
+    </nav>
+    <button class="sync-pill" id="sync-status" data-view="strategy" data-state="local" type="button">This browser only</button>
+  </header>
+
+  <main id="app">
+    <section id="view-calendar" class="view" hidden></section>
+    <section id="view-ideas" class="view" hidden></section>
+    <section id="view-journeys" class="view" hidden></section>
+    <section id="view-performance" class="view" hidden></section>
+    <section id="view-strategy" class="view" hidden></section>
+  </main>
+
+  <dialog id="editor" aria-labelledby="editor-title">
+    <form id="editor-form" method="dialog"></form>
+  </dialog>
+
+  <div id="auth" hidden>
+    <div class="auth-card">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <h2>Sign in to your planner</h2>
+      <p class="muted">Your plan is saved to your account, so it's the same on every browser and computer.</p>
+      <form id="auth-form">
+        <label class="field">Email<input type="email" name="email" autocomplete="email" required></label>
+        <label class="field">Password<input type="password" name="password" autocomplete="current-password" required minlength="6"></label>
+        <div class="row auth-actions">
+          <button class="btn primary" type="submit" value="signin">Sign in</button>
+          <button class="btn" type="submit" value="signup">Create account</button>
+        </div>
+        <p id="auth-msg" role="status" aria-live="polite"></p>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+  <div id="tip" role="tooltip"></div>
+
+  <script src="js/config.js?v=5"></script>
+  <script src="js/seed.js?v=5"></script>
+  <script src="js/cloud.js?v=5"></script>
+  <script src="js/app.js?v=5"></script>
+</body>
+</html>
