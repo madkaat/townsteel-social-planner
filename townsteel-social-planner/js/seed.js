@@ -70,8 +70,9 @@ const SEED_THEMES = {
   5: { name: "TownSteel in the Industry", pillar: "brand", alt: "" }
 };
 
-// "Posted" is always kept: it's what the Performance page counts.
-const SEED_STATUSES = ["Idea", "In progress", "Ready", "Posted"];
+// "Idea" and "Posted" are always kept.
+// "Idea" means the post lives in the idea bank (no date). "Posted" is what Performance counts.
+const SEED_STATUSES = ["Idea", "Planned", "In progress", "Ready", "Posted"];
 
 const SEED_FORMATS = [
   "Carousel", "Short video", "Product photo", "Simple graphic", "Explainer graphic",

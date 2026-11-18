@@ -11,6 +11,7 @@
 
   const STORAGE_KEY = "townsteel-social-planner-v1";
   const POSTED = "Posted"; // the one status the Performance page relies on
+  const IDEA = "Idea";     // posts with this status always live in the idea bank, not on the calendar
   const COLOR_COUNT = 8;
   const COLOR_NAMES = ["Blue", "Orange", "Aqua", "Yellow", "Pink", "Green", "Violet", "Red"];
   const DAY_NAMES = ["", "Mon", "Tue", "Wed", "Thu", "Fri"];
@@ -65,7 +66,7 @@
   const ui = { view: "calendar", week: null, ideaFilter: "all", ideaStatus: "todo", perfRange: "all" };
 
   function blankPost(fields) {
-    return Object.assign({ id: uid(), date: "", pillar: "", title: "", format: "", goal: "", status: "Idea", stage: "", caption: "", asset: "", notes: "", metrics: {} }, fields);
+    return Object.assign({ id: uid(), date: "", lastDate: "", pillar: "", title: "", format: "", goal: "", status: IDEA, stage: "", caption: "", asset: "", notes: "", metrics: {} }, fields);
   }
 
   // US Thanksgiving (4th Thursday of November) and the day after are low-attention days
@@ -101,7 +102,7 @@
   function buildSeed(startMonday) {
     const posts = SEED_POSTS.map(([w, d, pillar, title, format, goal, stage]) => {
       const date = addDays(startMonday, (w - 1) * 7 + (d - 1));
-      return blankPost({ date, pillar, title, format, goal, stage: stage || "", notes: holidayNote(date) });
+      return blankPost({ date, pillar, title, format, goal, stage: stage || "", status: "Planned", notes: holidayNote(date) });
     });
     const ideas = SEED_IDEAS.map(([pillar, title, format, goal, stage]) => blankPost({ pillar, title, format, goal, stage: stage || "" }));
     const weekFocus = {};
@@ -153,6 +154,8 @@
 
     const statuses = Array.isArray(s.statuses) && s.statuses.length ? s.statuses.slice() : base.statuses;
     if (!statuses.includes(POSTED)) statuses.push(POSTED);
+    if (!statuses.includes(IDEA)) statuses.unshift(IDEA);
+    if (!statuses.includes("Planned")) statuses.splice(statuses.indexOf(IDEA) + 1, 0, "Planned");
 
     return {
       version: 2,
@@ -166,7 +169,7 @@
         const post = blankPost(p);
         if (!post.stage && p.odmStage) post.stage = p.odmStage;
         delete post.odmStage;
-        return post;
+        return applyIdeaRule(post);
       }),
       weekFocus: s.weekFocus || {},
       followerLog: Array.isArray(s.followerLog) ? s.followerLog : [],
@@ -197,6 +200,17 @@
   function save() {
     writeLocal();
     if (window.Cloud) Cloud.changed();
+  }
+
+  // The idea rule: anything with the "Idea" status sits in the idea bank.
+  // Its old date is kept as lastDate so "Schedule" can suggest it again.
+  function applyIdeaRule(post) {
+    if (post.status === IDEA && post.date) { post.lastDate = post.date; post.date = ""; }
+    return post;
+  }
+  // The status a post gets when it goes onto the calendar
+  function scheduledStatus() {
+    return state.statuses.find((s) => s !== IDEA && s !== POSTED) || "Planned";
   }
 
   // ---------- Pillar helpers ----------
@@ -582,8 +596,8 @@
           <p class="faint" style="margin-bottom:10px">Suggested in the post editor. You can still type anything.</p>
           ${listEditor("formats", state.formats, "Add a format")}</div>
         <div class="card"><h3 style="font-size:16px;margin-bottom:4px">Statuses</h3>
-          <p class="faint" style="margin-bottom:10px">Your workflow steps, in order. "${POSTED}" is always kept because Performance counts it.</p>
-          ${listEditor("statuses", state.statuses, "Add a status", [POSTED])}</div>
+          <p class="faint" style="margin-bottom:10px">Your workflow steps, in order. "${IDEA}" and "${POSTED}" are always kept: anything marked ${IDEA} lives in the idea bank, and Performance counts ${POSTED}.</p>
+          ${listEditor("statuses", state.statuses, "Add a status", [IDEA, POSTED])}</div>
       </div>
 
       <div class="section-head" style="margin-top:28px"><h2>Your data</h2><p>${window.Cloud && Cloud.configured
@@ -628,6 +642,8 @@
 
   function openPostEditor(post, isNew) {
     const p = Object.assign({}, post, { metrics: Object.assign({}, post.metrics) });
+    const stored = state.posts.find((x) => x.id === post.id);
+    const onCalendar = !!(stored && stored.date);
     if (!p.pillar) p.pillar = (activePillars()[0] || {}).id || "";
     const form = $("#editor-form");
     const statuses = state.statuses.includes(p.status) ? state.statuses : state.statuses.concat(p.status);
@@ -639,7 +655,7 @@
       <div class="dlg-body">
         <label class="field">Title<input type="text" name="title" value="${esc(p.title)}" required placeholder="Working headline or hook"></label>
         <div class="form-3">
-          <label class="field">Date<input type="date" name="date" value="${esc(p.date)}"><span class="faint">Leave empty to keep it in the idea bank</span></label>
+          <label class="field">Date<input type="date" name="date" value="${esc(p.date)}"><span class="faint" id="date-hint"></span></label>
           <label class="field">Pillar<select name="pillar">${pillarOptions(p.pillar)}</select></label>
           <label class="field">Status<select name="status">${statusOpts}</select></label>
         </div>
@@ -659,7 +675,7 @@
         </fieldset>
       </div>
       <div class="dlg-foot">
-        <div class="row">${isNew ? "" : `<button type="button" class="btn danger" data-delete>Delete</button><button type="button" class="btn" data-duplicate>Duplicate</button>`}</div>
+        <div class="row">${isNew ? "" : `<button type="button" class="btn danger" data-delete>Delete</button><button type="button" class="btn" data-duplicate>Duplicate</button>`}${onCalendar ? `<button type="button" class="btn" data-tobank>Move to idea bank</button>` : ""}</div>
         <div class="row"><button type="button" class="btn" data-close>Cancel</button><button type="submit" class="btn primary">Save</button></div>
       </div>`;
 
@@ -670,6 +686,22 @@
       counter.classList.toggle("warn", n > 3000);
     };
     cap.addEventListener("input", updateCount); updateCount();
+    // Keep date and status in step: "Idea" means no date, a date means it's not just an idea
+    const hint = $("#date-hint");
+    const updateHint = () => {
+      hint.textContent = form.elements.status.value === IDEA
+        ? (onCalendar ? "Saving as Idea moves this to the idea bank" : "Ideas live in the idea bank")
+        : (form.elements.date.value ? "" : "Pick a date to put this on the calendar");
+    };
+    form.elements.status.addEventListener("change", () => {
+      if (form.elements.status.value === IDEA && form.elements.date.value) form.elements.date.value = "";
+      updateHint();
+    });
+    form.elements.date.addEventListener("change", () => {
+      if (form.elements.date.value && form.elements.status.value === IDEA) form.elements.status.value = scheduledStatus();
+      updateHint();
+    });
+    updateHint();
     form.elements.pillar.addEventListener("change", (e) => {
       $("#stage-field").hidden = !hasStages(pillar(e.target.value));
       form.elements.stage.innerHTML = stageOptions(e.target.value, "");
@@ -685,11 +717,19 @@
         format: f.format.value.trim(), stage: hasStages(pillar(f.pillar.value)) ? f.stage.value : "",
         goal: f.goal.value.trim(), caption: f.caption.value, asset: f.asset.value.trim(), notes: f.notes.value.trim(), metrics
       });
+      const wasOnCalendar = onCalendar;
+      applyIdeaRule(updated);
       const i = state.posts.findIndex((x) => x.id === updated.id);
       if (i >= 0) state.posts[i] = updated; else state.posts.push(updated);
       save(); closeEditor(); render();
-      toast(isNew ? "Added" : "Saved");
+      toast(wasOnCalendar && !updated.date ? "Moved to the idea bank" : !wasOnCalendar && updated.date && !isNew ? "Added to the calendar" : isNew ? "Added" : "Saved");
     };
+    const toBank = form.querySelector("[data-tobank]");
+    if (toBank) toBank.addEventListener("click", () => {
+      form.elements.status.value = IDEA;
+      form.elements.date.value = "";
+      form.requestSubmit ? form.requestSubmit() : form.onsubmit(new Event("submit"));
+    });
     form.querySelectorAll("[data-close]").forEach((b) => b.addEventListener("click", closeEditor));
     const del = form.querySelector("[data-delete]");
     if (del) del.addEventListener("click", () => {
@@ -699,7 +739,7 @@
     });
     const dup = form.querySelector("[data-duplicate]");
     if (dup) dup.addEventListener("click", () => {
-      const copy = Object.assign(clone(post), { id: uid(), title: post.title + " (copy)", status: state.statuses[0] || "Idea", metrics: {} });
+      const copy = Object.assign(clone(post), { id: uid(), title: post.title + " (copy)", status: post.date ? scheduledStatus() : IDEA, metrics: {} });
       state.posts.push(copy); save(); render(); openPostEditor(copy, false); toast("Duplicated");
     });
 
@@ -710,7 +750,7 @@
   function newPost(date) {
     const wk = date ? mondayOf(date) : ui.week;
     const pid = date ? defaultPillarForDay(weekdayOf(date), wk) : (ui.ideaFilter !== "all" ? ui.ideaFilter : (activePillars()[0] || {}).id);
-    return blankPost({ date: date || "", pillar: pid || "", status: state.statuses[0] || "Idea" });
+    return blankPost({ date: date || "", pillar: pid || "", status: date ? scheduledStatus() : IDEA });
   }
 
   // ---------- Pillar editor ----------
@@ -862,7 +902,11 @@
     if (d.edit) { const p = state.posts.find((x) => x.id === d.edit); if (p) openPostEditor(p, false); return; }
     if (d.schedule) {
       const p = state.posts.find((x) => x.id === d.schedule);
-      if (p) openPostEditor(Object.assign({}, p, { date: p.date || nextOpenDay() }), false);
+      if (p) {
+        const free = (d2) => d2 && d2 >= todayKey() && weekdayOf(d2) <= 5 && !scheduled().some((x) => x.date === d2);
+        const date = p.date || (free(p.lastDate) ? p.lastDate : nextOpenDay());
+        openPostEditor(Object.assign({}, p, { date, status: p.status === IDEA ? scheduledStatus() : p.status }), false);
+      }
       return;
     }
     if (d.editpillar !== undefined) { openPillarEditor(d.editpillar); return; }
@@ -889,7 +933,7 @@
     }
     if (d.listdel) {
       const [kind, idx] = d.listdel.split(":");
-      if (kind === "statuses" && state.statuses[idx] === POSTED) return;
+      if (kind === "statuses" && [POSTED, IDEA].includes(state.statuses[idx])) return;
       state[kind].splice(Number(idx), 1);
       save(); render(); return;
     }
